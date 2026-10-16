@@ -2,13 +2,6 @@
 ..\FrameXML\UI.xsd">
 	<Script file="TargetFrameBuff.lua"/>
 	
-	<Frame name="TargetFrameBuffFrame" parent="TargetFrame">
-		<Scripts>
-			<OnLoad>
-				TargetFrameBuff_OnLoad();
-			</OnLoad>
-		</Scripts>
-	</Frame>
 
 	<!-- 11 additional buff buttons (original code from FrameXML/TargetFrame.xml) -->
 	<Button name="TargetFrameBuff6" inherits="TargetBuffButtonTemplate" id="6" parent="TargetFrame">
@@ -256,5 +249,17 @@
 			</Anchor>
 		</Anchors>
 	</Button>
+
+	<!-- Defined after the buttons so they all exist when OnLoad runs -->
+	<Frame name="TargetFrameBuffFrame" parent="TargetFrame">
+		<Scripts>
+			<OnLoad>
+				TargetFrameBuff_OnLoad();
+			</OnLoad>
+			<OnUpdate>
+				TargetFrameBuff_OnUpdate(arg1);
+			</OnUpdate>
+		</Scripts>
+	</Frame>
 
 </Ui>
