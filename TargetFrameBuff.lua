@@ -38,11 +38,21 @@ function TargetFrameBuff_Update()
 		end
 	end
 
-	local debuff, debuffApplication, debuffCount;
+	local debuff, debuffApplications, debuffType, debuffCount, debuffBorder, color;
 	for i=1, TARGETFRAMEBUFF_MAX_TARGET_DEBUFFS do
-		debuff, debuffApplications = UnitDebuff("target", i);
+		debuff, debuffApplications, debuffType = UnitDebuff("target", i);
 		button = getglobal("TargetFrameDebuff"..i);
 		if (debuff) then
+			-- Color the border by debuff type (Magic, Curse, Disease, Poison).
+			-- Without this, a border keeps the color of whatever debuff
+			-- last used that slot, so debuffs show the wrong category.
+			debuffBorder = getglobal("TargetFrameDebuff"..i.."Border");
+			if (debuffBorder and DebuffTypeColor) then
+				color = DebuffTypeColor[debuffType or "none"] or DebuffTypeColor["none"];
+				if (color) then
+					debuffBorder:SetVertexColor(color.r, color.g, color.b);
+				end
+			end
 			debuffCount = getglobal("TargetFrameDebuff"..i.."Count");
 			if (debuffApplications > 1) then
 				debuffCount:SetText(debuffApplications);
