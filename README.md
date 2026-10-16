@@ -13,9 +13,6 @@ Based on: https://wow.curseforge.com/projects/project-949
 Rename TargetFrameBuff-master to TargetFrameBuff and drag it into your addon folder.
 Start up WoW and target a player with more than 5 buffs.
 
-![Image](https://i.imgur.com/JwMmVOB.png)
-![Image](https://i.imgur.com/9zSWudY.png)
-
 ### Known issues
 
 - Sometimes debuffs show up with the wrong category,
