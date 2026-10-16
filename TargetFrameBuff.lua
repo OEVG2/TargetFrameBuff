@@ -1,12 +1,12 @@
 
--- Title: TargetFrameBuff v0.6
--- Notes: Shows up to 16 Buffs & Debuffs on a Target (Buffs above, Debuffs below)
+-- Title: TargetFrameBuff v0.7
+-- Notes: Shows up to 32 Buffs & 16 Debuffs on a Target (Buffs above, Debuffs below)
 -- Author: lua@lumpn.de (modified)
 
 
 local lOriginal_TargetDebuffButton_Update = nil;
 local TARGETFRAMEBUFF_MAX_TARGET_DEBUFFS = 16;
-local TARGETFRAMEBUFF_MAX_TARGET_BUFFS = 16;
+local TARGETFRAMEBUFF_MAX_TARGET_BUFFS = 32;
 
 
 -- hook original update-function

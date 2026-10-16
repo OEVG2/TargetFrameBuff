@@ -111,4 +111,150 @@
 		</Anchors>
 	</Button>
 
+	<!-- 16 more buff buttons for a total of 32: row 3 (17-27) and row 4 (28-32) -->
+	<Button name="TargetFrameBuff17" inherits="TargetBuffButtonTemplate" id="17" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="BOTTOMLEFT" relativeTo="TargetFrameBuff6" relativePoint="TOPLEFT">
+				<Offset>
+					<AbsDimension x="0" y="2"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff18" inherits="TargetBuffButtonTemplate" id="18" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="LEFT" relativeTo="TargetFrameBuff17" relativePoint="RIGHT">
+				<Offset>
+					<AbsDimension x="3" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff19" inherits="TargetBuffButtonTemplate" id="19" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="LEFT" relativeTo="TargetFrameBuff18" relativePoint="RIGHT">
+				<Offset>
+					<AbsDimension x="3" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff20" inherits="TargetBuffButtonTemplate" id="20" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="LEFT" relativeTo="TargetFrameBuff19" relativePoint="RIGHT">
+				<Offset>
+					<AbsDimension x="3" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff21" inherits="TargetBuffButtonTemplate" id="21" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="LEFT" relativeTo="TargetFrameBuff20" relativePoint="RIGHT">
+				<Offset>
+					<AbsDimension x="3" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff22" inherits="TargetBuffButtonTemplate" id="22" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="LEFT" relativeTo="TargetFrameBuff21" relativePoint="RIGHT">
+				<Offset>
+					<AbsDimension x="3" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff23" inherits="TargetBuffButtonTemplate" id="23" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="LEFT" relativeTo="TargetFrameBuff22" relativePoint="RIGHT">
+				<Offset>
+					<AbsDimension x="3" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff24" inherits="TargetBuffButtonTemplate" id="24" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="LEFT" relativeTo="TargetFrameBuff23" relativePoint="RIGHT">
+				<Offset>
+					<AbsDimension x="3" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff25" inherits="TargetBuffButtonTemplate" id="25" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="LEFT" relativeTo="TargetFrameBuff24" relativePoint="RIGHT">
+				<Offset>
+					<AbsDimension x="3" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff26" inherits="TargetBuffButtonTemplate" id="26" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="LEFT" relativeTo="TargetFrameBuff25" relativePoint="RIGHT">
+				<Offset>
+					<AbsDimension x="3" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff27" inherits="TargetBuffButtonTemplate" id="27" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="LEFT" relativeTo="TargetFrameBuff26" relativePoint="RIGHT">
+				<Offset>
+					<AbsDimension x="3" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff28" inherits="TargetBuffButtonTemplate" id="28" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="BOTTOMLEFT" relativeTo="TargetFrameBuff17" relativePoint="TOPLEFT">
+				<Offset>
+					<AbsDimension x="0" y="2"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff29" inherits="TargetBuffButtonTemplate" id="29" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="LEFT" relativeTo="TargetFrameBuff28" relativePoint="RIGHT">
+				<Offset>
+					<AbsDimension x="3" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff30" inherits="TargetBuffButtonTemplate" id="30" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="LEFT" relativeTo="TargetFrameBuff29" relativePoint="RIGHT">
+				<Offset>
+					<AbsDimension x="3" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff31" inherits="TargetBuffButtonTemplate" id="31" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="LEFT" relativeTo="TargetFrameBuff30" relativePoint="RIGHT">
+				<Offset>
+					<AbsDimension x="3" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+	<Button name="TargetFrameBuff32" inherits="TargetBuffButtonTemplate" id="32" parent="TargetFrame">
+		<Anchors>
+			<Anchor point="LEFT" relativeTo="TargetFrameBuff31" relativePoint="RIGHT">
+				<Offset>
+					<AbsDimension x="3" y="0"/>
+				</Offset>
+			</Anchor>
+		</Anchors>
+	</Button>
+
 </Ui>
