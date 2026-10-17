@@ -177,7 +177,7 @@ end
 
 
 -- ClassicAPI path: buffs and debuffs by their real type, with expiration times.
--- On Turtle WoW the server puts extra debuffs into free buff slots once the
+-- On WoW 1.18.1 clients the server puts extra debuffs into free buff slots once the
 -- 16 debuff slots are full. Those are listed as debuffs here; any that don't
 -- fit the 16 debuff buttons go into the buff rows after the real buffs, so
 -- nothing on the target goes unseen.

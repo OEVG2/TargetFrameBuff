@@ -9,7 +9,7 @@ TargetFrameBuff allows you to view up to 32 buffs & 16 debuffs on a target in th
 With [ClassicAPI](https://github.com/brues-code/ClassicAPI) installed, each buff and debuff shows how long it has left, turning red in the last 5 seconds. Without ClassicAPI the addon works the same, just without timers.
 
 - Auras that were already up before you logged in, or before you first saw them land, show no timer.
-- On Turtle WoW, debuffs the server puts into buff slots (once a target has 16 debuffs) are shown after the target's buffs, with correct tooltips.
+- On WoW 1.18.1 clients, debuffs the server puts into buff slots (once a target has 16 debuffs) are shown after the target's buffs, with correct tooltips.
 
 Supports 1.12.1, but will most likely work on any vanilla patch.
 
