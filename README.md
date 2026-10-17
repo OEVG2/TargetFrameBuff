@@ -11,7 +11,7 @@ With [ClassicAPI](https://github.com/brues-code/ClassicAPI) installed, each buff
 - Auras that were already up before you logged in, or before you first saw them land, show no timer.
 - On WoW 1.18.1 clients, debuffs the server puts into buff slots (once a target has 16 debuffs) are shown after the target's buffs, with correct tooltips.
 
-Supports 1.12.1, but will most likely work on any vanilla patch.
+Tested on 1.18.1 , supports 1.12.1, but will most likely work on any vanilla patch.
 
 Based on: https://wow.curseforge.com/projects/project-949
 
