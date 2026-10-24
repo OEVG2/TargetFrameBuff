@@ -1,5 +1,5 @@
 
--- Title: TargetFrameBuff v0.8
+-- Title: TargetFrameBuff v0.9.1
 -- Notes: Shows up to 32 Buffs & 16 Debuffs on a Target (Buffs above, Debuffs below),
 --        with remaining-time countdowns when ClassicAPI is installed
 -- Author: lua@lumpn.de (modified)
@@ -11,12 +11,26 @@ local TARGETFRAMEBUFF_MAX_TARGET_BUFFS = 32;
 
 -- How often the countdowns refresh, in seconds.
 local TARGETFRAMEBUFF_TIMER_INTERVAL = 0.2;
--- Countdowns at or below this many seconds turn red.
-local TARGETFRAMEBUFF_TIMER_WARNING = 5;
 
 local lBuffButtons = {};
 local lDebuffButtons = {};
 local lTimerElapsed = 0;
+local lAuraElapsed = 0;
+local lActiveTimers = {};
+local lActiveTimerCount = 0;
+local TargetFrameBuff_UpdateTimer;
+-- Catch refreshes that change timing without a UNIT_AURA event.
+local TARGETFRAMEBUFF_AURA_INTERVAL = 0.5;
+local lHelpfulSlots = {};
+local lHarmfulSlots = {};
+local lRemovableColor = {r = 1, g = 0.82, b = 0};
+
+local function TargetFrameBuff_Setting(key)
+	if (TargetFrameBuffDB and TargetFrameBuffDB[key] ~= nil) then
+		return TargetFrameBuffDB[key];
+	end
+	return TargetFrameBuffDefaults[key];
+end
 
 
 -- ClassicAPI (a 1.12 client DLL) backports C_UnitAuras, which reports when
@@ -31,6 +45,8 @@ end
 -- ClassicAPI's HELPFUL/HARMFUL index space, so the tooltip always matches the
 -- icon, even for a debuff the server parked in a buff slot.
 local function TargetFrameBuff_AuraOnEnter()
+	TargetFrameBuff_UpdateClassicAPI();
+	if (not this.auraIndex) then GameTooltip:Hide(); return; end
 	GameTooltip:SetOwner(this, "ANCHOR_BOTTOMRIGHT", 15, -25);
 	GameTooltip:SetUnitAura("target", this.auraIndex, this.auraFilter);
 	GameTooltip:Show();
@@ -49,6 +65,14 @@ local function TargetFrameBuff_AddTimer(button)
 	timer:SetPoint("CENTER", button, "CENTER", 0, 0);
 	timer:Hide();
 
+	if (not button.auraCount) then
+		button.auraCount = holder:CreateFontString(nil, "OVERLAY");
+		button.auraCount:SetFont("Fonts\\FRIZQT__.TTF", 9, "OUTLINE");
+		button.auraCount:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 1, -1);
+		button.auraCount:Hide();
+		local stockCount = getglobal(button:GetName().."Count");
+		if (stockCount) then stockCount:Hide(); end
+	end
 	button.timer = timer;
 	button.timerText = nil;
 	button.expiration = 0;
@@ -57,9 +81,24 @@ end
 
 -- hook original update-function
 function TargetFrameBuff_OnLoad()
-	local i, button;
+	local i, button, overlay;
 	for i=1, TARGETFRAMEBUFF_MAX_TARGET_BUFFS do
 		lBuffButtons[i] = getglobal("TargetFrameBuff"..i);
+		button = lBuffButtons[i];
+		overlay = CreateFrame("Frame", nil, button);
+		overlay:SetAllPoints(button);
+		overlay:SetFrameLevel(button:GetFrameLevel() + 2);
+		button.auraCount = overlay:CreateFontString(nil, "OVERLAY");
+		button.auraCount:SetFont("Fonts\\FRIZQT__.TTF", 9, "OUTLINE");
+		button.auraCount:SetPoint("BOTTOMRIGHT", button, "BOTTOMRIGHT", 1, -1);
+		button.auraCount:Hide();
+		button.auraBorder = overlay:CreateTexture(nil, "OVERLAY");
+		button.auraBorder:SetTexture("Interface\\Buttons\\UI-Debuff-Overlays");
+		button.auraBorder:SetTexCoord(0.296875, 0.5703125, 0, 0.515625);
+		button.auraBorder:SetPoint("CENTER", button, "CENTER", 0, 0);
+		button.auraBorder:SetWidth(23);
+		button.auraBorder:SetHeight(23);
+		button.auraBorder:Hide();
 	end
 	for i=1, TARGETFRAMEBUFF_MAX_TARGET_DEBUFFS do
 		lDebuffButtons[i] = getglobal("TargetFrameDebuff"..i);
@@ -80,11 +119,20 @@ function TargetFrameBuff_OnLoad()
 		end
 	end
 
-	lOriginal_TargetDebuffButton_Update	= TargetDebuffButton_Update;
+	TargetFrameBuffFrame:RegisterEvent("UNIT_AURA");
+	TargetFrameBuffFrame:RegisterEvent("PLAYER_TARGET_CHANGED");
+	TargetFrameBuffFrame:SetScript("OnEvent", function()
+		if (event == "PLAYER_TARGET_CHANGED" or (event == "UNIT_AURA" and arg1 == "target")) then
+			TargetFrameBuff_Update();
+		end
+	end);
+
+	lOriginal_TargetDebuffButton_Update = TargetDebuffButton_Update;
 	TargetDebuffButton_Update = TargetFrameBuff_Update;
 
-	lOriginal_TargetDebuffButton_Update()
+	lOriginal_TargetDebuffButton_Update();
 	TargetFrameBuff_Restore();
+	TargetFrameBuff_Update();
 end
 
 
@@ -116,7 +164,9 @@ end
 
 
 local function TargetFrameBuff_SetCount(i, count)
-	local debuffCount = getglobal("TargetFrameDebuff"..i.."Count");
+	local stockCount = getglobal("TargetFrameDebuff"..i.."Count");
+	local debuffCount = lDebuffButtons[i].auraCount or stockCount;
+	if (debuffCount ~= stockCount) then stockCount:Hide(); end
 	if (count and count > 1) then
 		debuffCount:SetText(count);
 		debuffCount:Show();
@@ -128,7 +178,7 @@ end
 
 -- Stock 1.12 path: UnitBuff/UnitDebuff, no timing data.
 function TargetFrameBuff_UpdateNative()
-	local button, buff;
+	local button, buff, i;
 	for i=1, TARGETFRAMEBUFF_MAX_TARGET_BUFFS do
 		buff = UnitBuff("target", i);
 		button = lBuffButtons[i];
@@ -158,72 +208,146 @@ function TargetFrameBuff_UpdateNative()
 end
 
 
-local function TargetFrameBuff_ShowAura(button, filter, index, icon, expirationTime)
-	getglobal(button:GetName().."Icon"):SetTexture(icon);
-	button.auraFilter = filter;
-	button.auraIndex = index;
-	button.id = index;
-	button.expiration = expirationTime or 0;
-	button:Show();
+-- Slot ids are used only during this scan, never cached on buttons.
+local function TargetFrameBuff_Sweep(button, duration, expiration)
+	local enabled = TargetFrameBuff_Setting("sweeps");
+	if (enabled and not button.cooldown and not button.noCooldown) then
+		local ok, cd = pcall(CreateFrame, "Cooldown", nil, button, "CooldownFrameTemplate");
+		if (ok and cd and cd.SetCooldown) then
+			button.cooldown = cd;
+			cd:SetAllPoints(button);
+			cd:SetFrameLevel(button:GetFrameLevel() + 1);
+			cd:SetReverse(true);
+			cd:SetDrawEdge(true);
+			cd:Hide();
+		else
+			button.noCooldown = true;
+		end
+	end
+	local cd = button.cooldown;
+	if (not cd) then return; end
+	if (not enabled or not duration or duration <= 0 or not expiration or expiration <= GetTime()) then
+		cd:Hide();
+		button.sweepExpiration = nil;
+	elseif (button.sweepExpiration ~= expiration or button.sweepDuration ~= duration) then
+		cd:SetCooldown(expiration - duration, duration);
+		button.sweepExpiration = expiration;
+		button.sweepDuration = duration;
+	end
 end
-
 
 local function TargetFrameBuff_HideAura(button)
 	button.expiration = 0;
+	button.auraIndex = nil;
+	button.auraFilter = nil;
 	button.timerText = nil;
 	button.timer:Hide();
+	if (button.cooldown) then button.cooldown:Hide(); end
+	button.sweepExpiration = nil;
+	if (button.auraCount) then button.auraCount:Hide(); end
+	if (button.auraBorder) then button.auraBorder:Hide(); end
+	if (GameTooltip:IsOwned(button)) then GameTooltip:Hide(); end
 	button:Hide();
 end
 
-
--- ClassicAPI path: buffs and debuffs by their real type, with expiration times.
--- On WoW 1.18.1 clients the server puts extra debuffs into free buff slots once the
--- 16 debuff slots are full. Those are listed as debuffs here; any that don't
--- fit the 16 debuff buttons go into the buff rows after the real buffs, so
--- nothing on the target goes unseen.
-function TargetFrameBuff_UpdateClassicAPI()
-	local name, icon, count, dispelType, duration, expirationTime;
-	local numBuffs = 0;
-	local numDebuffs = 0;
-	local i;
-
-	for i=1, TARGETFRAMEBUFF_MAX_TARGET_BUFFS do
-		name, icon, count, dispelType, duration, expirationTime = C_UnitAuras.UnitAura("target", i, "HELPFUL");
-		if (not name and not icon) then
-			break;
-		end
-		numBuffs = i;
-		TargetFrameBuff_ShowAura(lBuffButtons[i], "HELPFUL", i, icon, expirationTime);
+local function TargetFrameBuff_ShowAura(button, filter, index, icon, count, dispelType, duration, expiration, removable)
+	if (button.auraIcon ~= icon) then
+		getglobal(button:GetName().."Icon"):SetTexture(icon);
+		button.auraIcon = icon;
 	end
-
-	i = 1;
-	while (true) do
-		name, icon, count, dispelType, duration, expirationTime = C_UnitAuras.UnitAura("target", i, "HARMFUL");
-		if (not name and not icon) then
-			break;
-		end
-		if (i <= TARGETFRAMEBUFF_MAX_TARGET_DEBUFFS) then
-			numDebuffs = i;
-			TargetFrameBuff_ColorBorder(i, dispelType);
-			TargetFrameBuff_SetCount(i, count);
-			TargetFrameBuff_ShowAura(lDebuffButtons[i], "HARMFUL", i, icon, expirationTime);
-		elseif (numBuffs < TARGETFRAMEBUFF_MAX_TARGET_BUFFS) then
-			numBuffs = numBuffs + 1;
-			TargetFrameBuff_ShowAura(lBuffButtons[numBuffs], "HARMFUL", i, icon, expirationTime);
+	button.auraFilter = filter;
+	button.auraIndex = index;
+	button.id = index;
+	button.expiration = expiration or 0;
+	if (button.auraCount) then
+		if (count and count > 1) then
+			button.auraCount:SetText(count);
+			button.auraCount:Show();
 		else
-			break;
+			button.auraCount:Hide();
 		end
-		i = i + 1;
 	end
-
-	for i=numBuffs+1, TARGETFRAMEBUFF_MAX_TARGET_BUFFS do
-		TargetFrameBuff_HideAura(lBuffButtons[i]);
+	if (button.auraBorder) then
+		local color;
+		if (filter == "HARMFUL") then
+			color = DebuffTypeColor[dispelType or "none"] or DebuffTypeColor["none"];
+		elseif (removable and TargetFrameBuff_Setting("highlight")) then
+			color = lRemovableColor;
+		end
+		if (color) then
+			button.auraBorder:SetVertexColor(color.r, color.g, color.b);
+			button.auraBorder:Show();
+		else
+			button.auraBorder:Hide();
+		end
 	end
-	for i=numDebuffs+1, TARGETFRAMEBUFF_MAX_TARGET_DEBUFFS do
-		TargetFrameBuff_HideAura(lDebuffButtons[i]);
+	TargetFrameBuff_Sweep(button, duration, expiration);
+	button:Show();
+	if (TargetFrameBuff_Setting("timers") and button.expiration > GetTime()) then
+		lActiveTimerCount = lActiveTimerCount + 1;
+		lActiveTimers[lActiveTimerCount] = button;
+		TargetFrameBuff_UpdateTimer(button, GetTime());
+	else
+		button.timerText = nil;
+		button.timer:Hide();
+	end
+	if (GameTooltip:IsOwned(button)) then
+		GameTooltip:SetUnitAura("target", index, filter);
 	end
 end
 
+-- Refresh icons, counts and expiration together so index reordering cannot
+-- attach a new aura's timer to an old icon. Older ClassicAPI uses the same
+-- presentation path, with its positional index getter.
+function TargetFrameBuff_UpdateClassicAPI()
+	local oldTimerCount = lActiveTimerCount;
+	lActiveTimerCount = 0;
+	lAuraElapsed = 0;
+	local numBuffs, numDebuffs = 0, 0;
+	local pass, filter, slots, n, index, token;
+	local name, icon, count, dispelType, duration, expiration, source, removable;
+	local batched = C_UnitAuras.GetAuraSlots and C_UnitAuras.UnitAuraBySlot;
+	for pass = 1, 2 do
+		if (pass == 1) then
+			filter, slots = "HELPFUL", lHelpfulSlots;
+		else
+			filter, slots = "HARMFUL", lHarmfulSlots;
+		end
+		if (batched) then
+			token, n = C_UnitAuras.GetAuraSlots("target", filter, nil, nil, slots);
+		else
+			n = TARGETFRAMEBUFF_MAX_TARGET_BUFFS + TARGETFRAMEBUFF_MAX_TARGET_DEBUFFS;
+		end
+		for index = 1, n do
+			if (batched) then
+				name, icon, count, dispelType, duration, expiration, source, removable = C_UnitAuras.UnitAuraBySlot("target", slots[index]);
+			else
+				name, icon, count, dispelType, duration, expiration, source, removable = C_UnitAuras.UnitAura("target", index, filter);
+			end
+			if (not name and not icon) then break; end
+			if (pass == 2 and index <= TARGETFRAMEBUFF_MAX_TARGET_DEBUFFS) then
+				numDebuffs = index;
+				TargetFrameBuff_ColorBorder(index, dispelType);
+				TargetFrameBuff_SetCount(index, count);
+				TargetFrameBuff_ShowAura(lDebuffButtons[index], filter, index, icon, count, dispelType, duration, expiration, removable);
+			elseif (numBuffs < TARGETFRAMEBUFF_MAX_TARGET_BUFFS) then
+				numBuffs = numBuffs + 1;
+				TargetFrameBuff_ShowAura(lBuffButtons[numBuffs], filter, index, icon, count, dispelType, duration, expiration, removable);
+			else
+				break;
+			end
+		end
+	end
+	for index = numBuffs + 1, TARGETFRAMEBUFF_MAX_TARGET_BUFFS do
+		TargetFrameBuff_HideAura(lBuffButtons[index]);
+	end
+	for index = numDebuffs + 1, TARGETFRAMEBUFF_MAX_TARGET_DEBUFFS do
+		TargetFrameBuff_HideAura(lDebuffButtons[index]);
+	end
+	for index = lActiveTimerCount + 1, oldTimerCount do
+		lActiveTimers[index] = nil;
+	end
+end
 
 function TargetFrameBuff_Layout()
 	local button;
@@ -270,18 +394,19 @@ local function TargetFrameBuff_FormatTime(remaining)
 end
 
 
-local function TargetFrameBuff_UpdateTimer(button, now)
+TargetFrameBuff_UpdateTimer = function(button, now)
 	if (not button:IsShown() or not button.auraIndex) then
 		return;
 	end
 
-	-- Re-read the expiration: recasting a buff that is already up can move it
-	-- without the game firing an aura update.
-	local name, icon, count, dispelType, duration, expirationTime = C_UnitAuras.UnitAura("target", button.auraIndex, button.auraFilter);
-	button.expiration = expirationTime or 0;
+	local size = TargetFrameBuff_Setting("timerSize");
+	if (button.timerSize ~= size) then
+		button.timer:SetFont("Fonts\\FRIZQT__.TTF", size, "OUTLINE");
+		button.timerSize = size;
+	end
 
 	local remaining = button.expiration - now;
-	if (button.expiration <= 0 or remaining <= 0) then
+	if (not TargetFrameBuff_Setting("timers") or button.expiration <= 0 or remaining <= 0) then
 		if (button.timerText) then
 			button.timerText = nil;
 			button.timer:Hide();
@@ -293,12 +418,12 @@ local function TargetFrameBuff_UpdateTimer(button, now)
 	if (text ~= button.timerText) then
 		button.timerText = text;
 		button.timer:SetText(text);
-		if (remaining <= TARGETFRAMEBUFF_TIMER_WARNING) then
-			button.timer:SetTextColor(1, 0.1, 0.1);
-		else
-			button.timer:SetTextColor(1, 1, 1);
-		end
 		button.timer:Show();
+	end
+	if (remaining <= TargetFrameBuff_Setting("warning")) then
+		button.timer:SetTextColor(1, 0.1, 0.1);
+	else
+		button.timer:SetTextColor(1, 1, 1);
 	end
 end
 
@@ -306,26 +431,34 @@ end
 -- Driven by TargetFrameBuffFrame, which is parented to TargetFrame, so this
 -- only runs while you have a target.
 function TargetFrameBuff_OnUpdate(elapsed)
-	lTimerElapsed = lTimerElapsed + (elapsed or 0);
-	if (lTimerElapsed < TARGETFRAMEBUFF_TIMER_INTERVAL) then
-		return;
-	end
-	lTimerElapsed = 0;
-
 	if (not lBuffButtons[1] or not lBuffButtons[1].timer or not TargetFrameBuff_HasClassicAPI()) then
 		return;
 	end
-
-	local now = GetTime();
-	local i;
-	for i=1, TARGETFRAMEBUFF_MAX_TARGET_BUFFS do
-		TargetFrameBuff_UpdateTimer(lBuffButtons[i], now);
+	elapsed = elapsed or 0;
+	lAuraElapsed = lAuraElapsed + elapsed;
+	if (lAuraElapsed >= TARGETFRAMEBUFF_AURA_INTERVAL) then
+		TargetFrameBuff_UpdateClassicAPI();
 	end
-	for i=1, TARGETFRAMEBUFF_MAX_TARGET_DEBUFFS do
-		TargetFrameBuff_UpdateTimer(lDebuffButtons[i], now);
+	if (lActiveTimerCount == 0) then
+		lTimerElapsed = 0;
+		return;
+	end
+	lTimerElapsed = lTimerElapsed + elapsed;
+	if (lTimerElapsed < TARGETFRAMEBUFF_TIMER_INTERVAL) then return; end
+	lTimerElapsed = 0;
+	local now = GetTime();
+	local i = lActiveTimerCount;
+	while (i >= 1) do
+		local button = lActiveTimers[i];
+		TargetFrameBuff_UpdateTimer(button, now);
+		if (not button:IsShown() or button.expiration <= now or not TargetFrameBuff_Setting("timers")) then
+			lActiveTimers[i] = lActiveTimers[lActiveTimerCount];
+			lActiveTimers[lActiveTimerCount] = nil;
+			lActiveTimerCount = lActiveTimerCount - 1;
+		end
+		i = i - 1;
 	end
 end
-
 
 function TargetFrameBuff_Restore()
 	-- Resize debuffs to full size
@@ -343,3 +476,4 @@ function TargetFrameBuff_Restore()
 		end
 	end
 end
+
